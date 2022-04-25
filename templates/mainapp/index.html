@@ -1,0 +1,133 @@
+{% extends 'mainapp/base.html' %}
+{% block content %}
+
+
+
+<!-- Filters start -->
+<form action="/" method="get">
+<form method="get" enctype="form-data">
+    <!-- gender filter start -->
+&nbsp; Gender:
+<div class="btn-group" role="group" aria-label="Basic checkbox toggle button group">
+    {% for gender in genders %}
+        <input type="checkbox" class="btn-check" id="{{ gender }}" autocomplete="off" name="gender" value="{{ gender }}" checked>
+        <label class="btn btn-outline-primary" for="{{ gender }}">{{ gender }}</label>
+    {% endfor %}
+</div>
+    <!-- gender filter end -->
+&nbsp;&nbsp;&nbsp;&nbsp; Age:
+    <!-- age filter start -->
+<div class="btn-group" role="group" aria-label="Basic checkbox toggle button group" >
+    {% for age_group in age_groups %}
+        <input type="checkbox" class="btn-check" id="{{ age_group }}" autocomplete="off" name="age_group" value="{{ age_group }}" checked>
+        <label class="btn btn-outline-primary" for="{{ age_group }}">{{ age_group }}</label>
+    {% endfor %}
+</div>
+    <!-- age filter end -->
+
+<br>
+<br>
+
+&nbsp; Practice in:
+    <!-- language filter start -->
+<div class="btn-group" role="group" aria-label="Basic checkbox toggle button group">
+    {% for language in languages %}
+        <input type="checkbox" class="btn-check" id="{{ language }}" autocomplete="off" name="language" value="{{ language }}">
+        <label class="btn btn-outline-primary" for="{{ language }}">{{ language }}</label>
+</div>
+    {% endfor %}
+    <!-- language filter end -->
+<br>
+<br>
+&nbsp; Interesting topics:
+    <!-- tag filter start -->
+<div class="btn-group" role="group" aria-label="Basic checkbox toggle button group">
+    {% for tag in tags %}
+        <input type="checkbox" class="btn-check" id="{{ tag }}" autocomplete="off">
+        <label class="btn btn-outline-primary" for="{{ tag }}">{{ tag }}</label>
+</div>
+    {% endfor %}
+    <!-- tag filter end -->
+<br>
+<br>
+    <input type="submit" value="PICK">
+</form>
+<!-- Filters end -->
+
+
+
+
+
+<br>
+
+<br>
+{{a}}
+<br>
+
+<div class="row row-cols-1 row-cols-md-5 g-4">
+  {% for profile in object_list %}
+    {% if profile.user.id != request.user.pk %}
+   <div class="col">
+   <div class="card bg-info h-100" style="width: 20rem;">
+       {% if profile.avatar %}<img src="{{ profile.avatar.url }}" class="card-img-top" alt="...">{% endif %}
+       <div class="card-body">
+           <h5 class="card-title">{{ profile }}</h5>
+               <p class="card-text">age: {{ profile.age }}y, <br>
+                   gender: {{ profile.get_gender_display }}, <br>
+                   from: {{ profile.country }}</p>
+               <p class="card-text">would talk in: {% for area in profile.study.all %}{{ area }}, {% endfor %}</p>
+       </div>
+       <div class="card-footer {% if profile.user in request.online_now %} bg-success {% else %} text-muted {% endif %}">
+           <a href="{{ profile.get_absolute_url }}" class="btn btn-primary">Profile</a>
+           <br>
+           {% if profile.user in request.online_now %}
+               <p>ONLINE</p>
+           {% else %}
+               <p>online: {{ profile.user.last_login|timesince }} ago</p>
+           {% endif %}
+       </div>
+   </div>
+   </div>
+
+
+    {% endif %}
+  {% endfor %}
+</div>
+
+
+
+
+
+
+    <!-- Pagination start -->
+{% if page_obj.has_other_pages %}
+<nav aria-label="...">
+  <ul class="pagination justify-content-center">
+
+    {% if page_obj.has_previous %}
+      <li>
+        <a class="page-link" href="?page={{ page_obj.previous_page_number }}" tabindex="-1">Previous</a>
+      </li>
+    {% endif %}
+
+    {% for p in paginator.page_range %}
+      {% if page_obj.number == p %}
+        <li class="page-item active"><a class="page-link" href="#">{{ p }}<span class="sr-only"></span></a></li>
+      {% elif p >= page_obj.number|add:-2 and p <= page_obj.number|add:2  %}
+        <li class="page-item"><a class="page-link" href="?page={{ p }}">{{ p }}</a></li>
+      {% endif %}
+    {% endfor %}
+
+    {% if page_obj.has_next %}
+    <li class="page-item">
+      <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+    </li>
+    {% endif %}
+
+  </ul>
+</nav>
+{% endif %}
+    <!-- Pagination end -->
+
+
+{% endblock content %}

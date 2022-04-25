@@ -1,0 +1,90 @@
+{% extends 'mainapp/base.html' %}
+{% block content %}
+
+<body>
+
+<!-- Profile data -->
+<p>{{ profile.user.first_name }} {{ profile.user.last_name }}  {% if profile.pk == profile_id %} <a href="{% url 'profile-redacting' profile_id    %}">edit</a> {% endif %}</p>
+
+{% if profile.age %}<p>{{ profile.age }} y</p> {% endif %}
+<p>{% if profile.avatar %}<img src="{{ profile.avatar.url }}"></p>{% endif %}
+<p>gender: {{ profile.get_gender_display }}</p>
+<p>from: {{ profile.country }}</p>
+<p>interested in:</p>
+<p>{% for area in profile.tags.all %}{{ area }}, {% endfor %}</p>
+<p>native in: {% for area in profile.native_in.all %}{{ area }}, {% endfor %}</p>
+<p>would talk in: {% for area in profile.study.all %} <a href={{ area.get_absolute_url }}>{{ area }}</a>, {% endfor %}</p>
+
+<br>
+
+{% if is_follower %} we are friends {% endif %}
+
+<!-- Friends requests zone -->
+{% if request.user.is_authenticated %}
+  {% if profile.pk == profile_id %}
+      {% if followers_requests_queryset %}
+          <h5> Requests to follow from:</h5>
+          {% for follower in followers_requests_queryset %}
+              <form method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="follower" value="{{ follower.follower_id }}">
+                  <input type="hidden" name="followed" value="{{ profile_id }}">
+                  <p><a href="{% url 'profile' follower.follower_id %}">{{ follower }}</a>
+                  <input type="submit" class="btn btn-success" value="+ Accept" name="follow_accept">
+                  <input type="submit" class="btn btn-warning" value="- Reject" name="follow_reject">
+                  </p>
+              </form>
+          {% endfor %}
+      {% endif %}
+  {% else %}
+  <!-- else show button to follow -->
+      <form method="post">
+      {% csrf_token %}
+          <input type="hidden" name="followed" value="{{ profile.pk }}">
+          <input type="hidden" name="follower" value="{{ profile_id }}">
+          {% if is_requested %}
+              <p> {{ profile.user.first_name }} would practice with you </p>
+              <input type="submit" class="btn btn-success" value="+ Accept" name="follow_accept">
+              <input type="submit" class="btn btn-warning" value="- Reject" name="follow_reject">
+          {% else %}
+              <input type="submit" value="Request to practice" name="follow_request">
+          {% endif %}
+      </form>
+  {% endif %}
+{% endif %}
+
+
+
+<br>
+<hr>
+<!-- Recently visited profiles area -->
+<h5> Recently visited profiles: </h5>
+
+<div class="row row-cols-1 row-cols-md-5 g-2">
+  {% for profile in viewed_profiles %}
+   <div class="col">
+   <div class="card bg-info h-100" style="width: 12rem;">
+       <img src="{{ profile.avatar.url }}" class="card-img-top" alt="...">
+       <div class="card-body">
+           <h5 class="card-title">{{ profile }}</h5>
+               <p class="card-text">age: {{ profile.age }}y, gender: {{ profile.gender }}, from: {{ profile.country }}</p>
+               <p class="card-text">would talk in: {% for area in profile.study.all %}{{ area }}, {% endfor %}</p>
+
+       </div>
+       <div class="card-footer text-muted">
+           <a href="{{ profile.get_absolute_url }}" class="btn btn-primary">Profile</a>
+           <br>
+           online: 2 days ago
+       </div>
+   </div>
+  {% empty %}
+       <p> No one profile was viewed, <a href="{% url 'index' %}" >see all</a></p>
+   </div>
+  {% endfor %}
+</div>
+
+
+
+</body>
+
+{% endblock content %}

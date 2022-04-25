@@ -1,0 +1,23 @@
+{% extends 'mainapp/base.html' %}
+{% block content %}
+
+<p>{{profile}}</p>
+<br>
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <input type="submit" value="Save">
+</form>
+
+
+<hr>
+<h5> Edit studying languages and levels: </h5>
+     {% for area in profile.study.all %}
+
+     <p>
+     <a href="{% url 'profile-language-level' profile.pk area.pk %}" >{{area}}</a>
+     </p>
+     {% endfor %}
+
+{% endblock content %}
