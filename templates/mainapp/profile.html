@@ -17,41 +17,44 @@
 
 <br>
 
-{% if is_follower %} we are friends {% endif %}
-
-<!-- Friends requests zone -->
-{% if request.user.is_authenticated %}
-  {% if profile.pk == profile_id %}
-      {% if followers_requests_queryset %}
-          <h5> Requests to follow from:</h5>
-          {% for follower in followers_requests_queryset %}
-              <form method="post">
+{% if is_follower %}
+        <p>we are friends</p>
+    {% else %}
+        <!-- Friends requests zone -->
+        {% if request.user.is_authenticated %}
+            {% if profile.pk == profile_id %}
+                {% if followers_requests_queryset %}
+                    <h5> Requests to follow from:</h5>
+                    {% for follower in followers_requests_queryset %}
+                          <form method="post">
+                              {% csrf_token %}
+                              <input type="hidden" name="follower" value="{{ follower.follower_id }}">
+                              <input type="hidden" name="followed" value="{{ profile_id }}">
+                              <p><a href="{% url 'profile' follower.follower_id %}">{{ follower }}</a>
+                              <input type="submit" class="btn btn-success" value="+ Accept" name="follow_accept">
+                              <input type="submit" class="btn btn-warning" value="- Reject" name="follow_reject">
+                              </p>
+                          </form>
+                    {% endfor %}
+                {% endif %}
+            {% else %}
+            <!-- else show button to follow -->
+                  <form method="post">
                   {% csrf_token %}
-                  <input type="hidden" name="follower" value="{{ follower.follower_id }}">
-                  <input type="hidden" name="followed" value="{{ profile_id }}">
-                  <p><a href="{% url 'profile' follower.follower_id %}">{{ follower }}</a>
-                  <input type="submit" class="btn btn-success" value="+ Accept" name="follow_accept">
-                  <input type="submit" class="btn btn-warning" value="- Reject" name="follow_reject">
-                  </p>
-              </form>
-          {% endfor %}
-      {% endif %}
-  {% else %}
-  <!-- else show button to follow -->
-      <form method="post">
-      {% csrf_token %}
-          <input type="hidden" name="followed" value="{{ profile.pk }}">
-          <input type="hidden" name="follower" value="{{ profile_id }}">
-          {% if is_requested %}
-              <p> {{ profile.user.first_name }} would practice with you </p>
-              <input type="submit" class="btn btn-success" value="+ Accept" name="follow_accept">
-              <input type="submit" class="btn btn-warning" value="- Reject" name="follow_reject">
-          {% else %}
-              <input type="submit" value="Request to practice" name="follow_request">
-          {% endif %}
-      </form>
-  {% endif %}
+                      <input type="hidden" name="followed" value="{{ profile.pk }}">
+                      <input type="hidden" name="follower" value="{{ profile_id }}">
+                      {% if is_requested %}
+                          <p> {{ profile.user.first_name }} would practice with you </p>
+                          <input type="submit" class="btn btn-success" value="+ Accept" name="follow_accept">
+                          <input type="submit" class="btn btn-warning" value="- Reject" name="follow_reject">
+                      {% else %}
+                          <input type="submit" value="Request to practice" name="follow_request">
+                      {% endif %}
+                  </form>
+        {% endif %}
+    {% endif %}
 {% endif %}
+
 
 
 

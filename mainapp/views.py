@@ -146,32 +146,27 @@ class ProfileView(GenerateContentMixin, DetailView):
     extra_context = {'title': 'profile', 'age': age}
 
     def post(self, request, *args, **kwargs):
-        print(request.POST)
         self.object = self.get_object()
+
+        followed = Profile.objects.get(pk=self.request.POST['followed'])
+        follower = Profile.objects.get(pk=self.request.POST['follower'])
 
         # add following request
         if 'follow_request' in request.POST:
-            followed = Profile.objects.get(pk=self.request.POST['followed'])
-            follower = Profile.objects.get(pk=self.request.POST['follower'])
-
             obj, created = Partner.objects.update_or_create(
-                followed=followed, follower=follower,
-                defaults={'followed': followed, 'follower': follower}, )
+                followed=followed, follower=follower)
             if created:
                 messages.success(request, 'Request was sent. You will be able to chat after confirming the request')
             else:
                 messages.success(request, """You have already sent request. 
                                              Request was updated. 
                                              You will be able to chat after confirming the request""")
-
-        if ('follow_accept' or 'follow_reject') in request.POST:
-            followed = Profile.objects.get(pk=self.request.POST['followed'])
-            follower = Profile.objects.get(pk=self.request.POST['follower'])
-            if 'follow_accept' in request.POST:
+        if 'follow_accept' in request.POST:
                 Partner.objects.filter(followed=followed, follower=follower).update(response_date=now())
                 Partner.objects.filter(follower=followed, followed=follower).update(response_date=now())
-            else:
+        if 'follow_reject' in request.POST:
                 Partner.objects.filter(followed=followed, follower=follower).delete()
+                Partner.objects.filter(follower=followed, followed=follower).delete()
 
         context = self.get_context_data(object=self.object)
         return self.render_to_response(context)
