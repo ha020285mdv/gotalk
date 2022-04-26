@@ -79,9 +79,10 @@ class Profile(models.Model):
     tags = models.ManyToManyField(Tag, blank=True)
     native_in = models.ManyToManyField(Language, related_name='native', blank=True)
     study = models.ManyToManyField(Language, blank=True, through=LanguageLevel)
+    partner = models.ManyToManyField('Profile', blank=True, through='Partner', symmetrical=False)
 
     def __str__(self):
-        return self.user.first_name + ' ' + self.user.last_name
+        return str(self.pk) + ' ' + self.user.first_name + ' ' + self.user.last_name
 
     def get_absolute_url(self):
         return reverse('profile', kwargs={'profile_id': self.id})

@@ -10,6 +10,7 @@ from django.utils.timezone import now
 from django.views.generic import CreateView, DetailView, UpdateView, ListView
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from django.db.models import Q
 
 from .forms import *
 from .models import *
@@ -28,6 +29,12 @@ class GenerateContentMixin:
                 pass
             context['profile_id'] = profile_id
         return context
+
+
+class PartnerDataGenerateMixin:
+    def get_partners_queryset(self):
+        logined_id = Profile.objects.get(user_id=self.request.user.pk).id
+        return Partner.objects.filter(Q(followed_id=logined_id, response_date__isnull=False) | Q(follower_id=logined_id, response_date__isnull=False))
 
 
 class ProfilesView(GenerateContentMixin, ListView):
@@ -134,7 +141,7 @@ def logout_user(request):
     return redirect('index')
 
 
-class ProfileView(GenerateContentMixin, DetailView):
+class ProfileView(GenerateContentMixin, PartnerDataGenerateMixin, DetailView):
     model = Profile
     template_name = 'mainapp/profile.html'
     pk_url_kwarg = 'profile_id'
@@ -194,6 +201,9 @@ class ProfileView(GenerateContentMixin, DetailView):
         # make queryset of following requests:
         followers_requests_queryset = Partner.objects.filter(followed_id=profile_pk, response_date__isnull=True)
         context['followers_requests_queryset'] = followers_requests_queryset
+
+        #queryset of partners:
+        context['partners'] = self.get_partners_queryset()
 
         # check if profile sent request to logined profile:
         try:
