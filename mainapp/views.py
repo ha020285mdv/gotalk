@@ -33,15 +33,12 @@ class GenerateContentMixin:
 
 class PartnerDataGenerateMixin:
     def get_partners_queryset(self):
-        try:
-            logined_id = Profile.objects.get(user_id=self.request.user.pk).id
-            return Partner.objects.filter(
-                Q(followed_id=logined_id,
-                  response_date__isnull=False) |
-                Q(follower_id=logined_id,
-                  response_date__isnull=False))
-        except:
-            return None
+        logined_id = Profile.objects.get(user_id=self.request.user.pk).id
+        partners1 = Partner.objects.filter(followed_id=logined_id, response_date__isnull=False).values('follower_id')
+        partners2 = Partner.objects.filter(follower_id=logined_id, response_date__isnull=False).values('followed_id')
+        partners = partners1.union(partners2)
+        partners = Profile.objects.filter(pk__in=partners)
+        return partners
 
 
 class ProfilesView(GenerateContentMixin, ListView):
@@ -176,11 +173,11 @@ class ProfileView(GenerateContentMixin, PartnerDataGenerateMixin, DetailView):
                                              Request was updated. 
                                              You will be able to chat after confirming the request""")
         if 'follow_accept' in request.POST:
-                Partner.objects.filter(followed=followed, follower=follower).update(response_date=now())
-                Partner.objects.filter(follower=followed, followed=follower).update(response_date=now())
+            Partner.objects.filter(followed=followed, follower=follower).update(response_date=now())
+            Partner.objects.filter(follower=followed, followed=follower).update(response_date=now())
         if 'follow_reject' in request.POST:
-                Partner.objects.filter(followed=followed, follower=follower).delete()
-                Partner.objects.filter(follower=followed, followed=follower).delete()
+            Partner.objects.filter(followed=followed, follower=follower).delete()
+            Partner.objects.filter(follower=followed, followed=follower).delete()
 
         context = self.get_context_data(object=self.object)
         return self.render_to_response(context)
@@ -209,7 +206,7 @@ class ProfileView(GenerateContentMixin, PartnerDataGenerateMixin, DetailView):
         followers_requests_queryset = Partner.objects.filter(followed_id=profile_pk, response_date__isnull=True)
         context['followers_requests_queryset'] = followers_requests_queryset
 
-        #queryset of partners:
+        # queryset of partners:
         context['partners'] = self.get_partners_queryset()
 
         # check if profile sent request to logined profile:

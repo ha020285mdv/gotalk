@@ -15,7 +15,17 @@
 <p>native in: {% for area in profile.native_in.all %}{{ area }}, {% endfor %}</p>
 <p>would talk in: {% for area in profile.study.all %} <a href={{ area.get_absolute_url }}>{{ area }}</a>, {% endfor %}</p>
 
-<br>
+
+{% if profile.pk == profile_id %}
+    {% if partners %}
+      <br> <hr>
+          <h5>My partners:</h5>
+              {% for partner in partners %}
+                  <p><a href="{{ partner.get_absolute_url }}">{{partner}}</a></p>
+              {% endfor %}
+    {% endif %}
+{% endif %}
+
 
 {% if is_follower %}
         <p>we are friends</p>
@@ -24,7 +34,7 @@
         {% if request.user.is_authenticated %}
             {% if profile.pk == profile_id %}
                 {% if followers_requests_queryset %}
-                    <h5> Requests to follow from:</h5>
+                    <p> New:</p>
                     {% for follower in followers_requests_queryset %}
                           <form method="post">
                               {% csrf_token %}

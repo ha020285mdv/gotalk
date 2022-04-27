@@ -21,8 +21,7 @@
        <div class="navbar-nav">
          <a class="nav-link active" aria-current="page" href="{% url 'index' %}">Home</a>
          {% if request.user.is_authenticated %}
-         <a class="nav-link" href="#">Partners{% if partners %}(+{{ partners|length }}){% endif %}</a>
-         {{ partners }}
+         <a class="nav-link" href="#">Partners{% if followers_requests_queryset %}(+{{ followers_requests_queryset|length }}){% endif %}</a>
          {% endif %}
          <a class="nav-link disabled">|</a>
          {% if request.user.is_authenticated %}
