@@ -106,4 +106,4 @@ class Partner(models.Model):
         unique_together = [['followed', 'follower']]
 
     def __str__(self):
-        return self.follower.user.first_name
+        return f'{self.follower.user.first_name}-{self.followed.user.first_name}'

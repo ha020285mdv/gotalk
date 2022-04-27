@@ -33,8 +33,15 @@ class GenerateContentMixin:
 
 class PartnerDataGenerateMixin:
     def get_partners_queryset(self):
-        logined_id = Profile.objects.get(user_id=self.request.user.pk).id
-        return Partner.objects.filter(Q(followed_id=logined_id, response_date__isnull=False) | Q(follower_id=logined_id, response_date__isnull=False))
+        try:
+            logined_id = Profile.objects.get(user_id=self.request.user.pk).id
+            return Partner.objects.filter(
+                Q(followed_id=logined_id,
+                  response_date__isnull=False) |
+                Q(follower_id=logined_id,
+                  response_date__isnull=False))
+        except:
+            return None
 
 
 class ProfilesView(GenerateContentMixin, ListView):
