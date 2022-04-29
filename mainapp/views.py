@@ -10,8 +10,6 @@ from django.utils.timezone import now
 from django.views.generic import CreateView, DetailView, UpdateView, ListView
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
-from django.db.models import Q
-
 from .forms import *
 from .models import *
 from django.contrib.messages.views import *
@@ -33,12 +31,17 @@ class GenerateContentMixin:
 
 class PartnerDataGenerateMixin:
     def get_partners_queryset(self):
-        logined_id = Profile.objects.get(user_id=self.request.user.pk).id
-        partners1 = Partner.objects.filter(followed_id=logined_id, response_date__isnull=False).values('follower_id')
-        partners2 = Partner.objects.filter(follower_id=logined_id, response_date__isnull=False).values('followed_id')
-        partners = partners1.union(partners2)
-        partners = Profile.objects.filter(pk__in=partners)
-        return partners
+        try:
+            logined_id = Profile.objects.get(user_id=self.request.user.pk).id
+            partners1 = Partner.objects.filter(followed_id=logined_id, response_date__isnull=False).values('follower_id')
+            partners2 = Partner.objects.filter(follower_id=logined_id, response_date__isnull=False).values('followed_id')
+            partners = partners1.union(partners2)
+            partners = Profile.objects.filter(pk__in=partners)
+            return partners
+        except:
+            return None
+
+
 
 
 class ProfilesView(GenerateContentMixin, ListView):
