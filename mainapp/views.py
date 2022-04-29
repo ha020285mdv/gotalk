@@ -28,18 +28,86 @@ class GenerateContentMixin:
             context['profile_id'] = profile_id
         return context
 
+class GetLoginedProfileId:
+    def get_logined_profile_id(self):
+        try:
+            return Profile.objects.get(user_id=self.request.user.pk).id
+        except:
+            return None
+
 
 class PartnerDataGenerateMixin:
-    def get_partners_queryset(self):
+    def get_partners_queryset(self, logined_id):
         try:
-            logined_id = Profile.objects.get(user_id=self.request.user.pk).id
             partners1 = Partner.objects.filter(followed_id=logined_id, response_date__isnull=False).values('follower_id')
             partners2 = Partner.objects.filter(follower_id=logined_id, response_date__isnull=False).values('followed_id')
             partners = partners1.union(partners2)
-            partners = Profile.objects.filter(pk__in=partners)
-            return partners
+            return Profile.objects.filter(pk__in=partners)
         except:
             return None
+
+    def get_followers_requests_queryset(self, profile_pk):
+        return Partner.objects.filter(followed_id=profile_pk,
+                                      response_date__isnull=True)
+
+    def is_follow_request(self, logined_id, profile_pk):
+        try:
+            Partner.objects.get(follower_id=profile_pk, followed_id=logined_id, response_date__isnull=True)
+            return True
+        except:
+            return False
+
+    def is_follower(self, logined_id, profile_pk):
+        is_follower = Partner.objects.filter(follower_id=profile_pk,
+                                             followed_id=logined_id,
+                                             response_date__isnull=False)
+        is_followed = Partner.objects.filter(followed_id=profile_pk,
+                                             follower_id=logined_id,
+                                             response_date__isnull=False)
+        if is_follower.exists() or is_followed.exists():
+            return True
+
+    def post_handler(self):
+        followed = Profile.objects.get(pk=self.request.POST['followed'])
+        follower = Profile.objects.get(pk=self.request.POST['follower'])
+
+        # add following request
+        if 'follow_request' in request.POST:
+            obj, created = Partner.objects.update_or_create(
+                followed=followed, follower=follower)
+            if created:
+                messages.success(request, 'Request was sent. You will be able to chat after confirming the request')
+            else:
+                messages.success(request, """You have already sent request. 
+                                             Request was updated. 
+                                             You will be able to chat after confirming the request""")
+        if 'follow_accept' in request.POST:
+            Partner.objects.filter(followed=followed, follower=follower).update(response_date=now())
+            Partner.objects.filter(follower=followed, followed=follower).update(response_date=now())
+        if 'follow_reject' in request.POST:
+            Partner.objects.filter(followed=followed, follower=follower).delete()
+            Partner.objects.filter(follower=followed, followed=follower).delete()
+
+
+class SessionMixin:
+    def get_visited_profiles(self, profile_pk, context):
+        # make queryset of visited profiles
+        if 'visited_profiles' in self.request.session:
+            if profile_pk in self.request.session['visited_profiles']:
+                self.request.session['visited_profiles'].remove(profile_pk)
+            profiles = self.model.objects.filter(pk__in=self.request.session['visited_profiles'])
+            viewed_profiles = sorted(profiles,
+                                     key=lambda x: self.request.session['visited_profiles'].index(x.pk))
+            context['viewed_profiles'] = viewed_profiles[:5]
+
+            self.request.session['visited_profiles'].insert(0, profile_pk)
+            if len(self.request.session['visited_profiles']) > 6:
+                self.request.session['visited_profiles'].pop()
+        else:
+            self.request.session['visited_profiles'] = [profile_pk]
+        self.request.session.modified = True
+
+
 
 
 
@@ -148,7 +216,11 @@ def logout_user(request):
     return redirect('index')
 
 
-class ProfileView(GenerateContentMixin, PartnerDataGenerateMixin, DetailView):
+class ProfileView(GenerateContentMixin,
+                  GetLoginedProfileId,
+                  PartnerDataGenerateMixin,
+                  SessionMixin,
+                  DetailView):
     model = Profile
     template_name = 'mainapp/profile.html'
     pk_url_kwarg = 'profile_id'
@@ -161,76 +233,24 @@ class ProfileView(GenerateContentMixin, PartnerDataGenerateMixin, DetailView):
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
-
-        followed = Profile.objects.get(pk=self.request.POST['followed'])
-        follower = Profile.objects.get(pk=self.request.POST['follower'])
-
-        # add following request
-        if 'follow_request' in request.POST:
-            obj, created = Partner.objects.update_or_create(
-                followed=followed, follower=follower)
-            if created:
-                messages.success(request, 'Request was sent. You will be able to chat after confirming the request')
-            else:
-                messages.success(request, """You have already sent request. 
-                                             Request was updated. 
-                                             You will be able to chat after confirming the request""")
-        if 'follow_accept' in request.POST:
-            Partner.objects.filter(followed=followed, follower=follower).update(response_date=now())
-            Partner.objects.filter(follower=followed, followed=follower).update(response_date=now())
-        if 'follow_reject' in request.POST:
-            Partner.objects.filter(followed=followed, follower=follower).delete()
-            Partner.objects.filter(follower=followed, followed=follower).delete()
-
+        self.post_handler()
         context = self.get_context_data(object=self.object)
         return self.render_to_response(context)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         profile_pk = context['object'].pk  # id of seek profile
-
-        # make queryset of visited profiles
-        if 'visited_profiles' in self.request.session:
-            if profile_pk in self.request.session['visited_profiles']:
-                self.request.session['visited_profiles'].remove(profile_pk)
-            profiles = self.model.objects.filter(pk__in=self.request.session['visited_profiles'])
-            viewed_profiles = sorted(profiles,
-                                     key=lambda x: self.request.session['visited_profiles'].index(x.pk))
-            context['viewed_profiles'] = viewed_profiles[:5]
-
-            self.request.session['visited_profiles'].insert(0, profile_pk)
-            if len(self.request.session['visited_profiles']) > 6:
-                self.request.session['visited_profiles'].pop()
-        else:
-            self.request.session['visited_profiles'] = [profile_pk]
-        self.request.session.modified = True
-
-        # make queryset of following requests:
-        followers_requests_queryset = Partner.objects.filter(followed_id=profile_pk, response_date__isnull=True)
-        context['followers_requests_queryset'] = followers_requests_queryset
-
+        logined_id = self.get_logined_profile_id()
+        #make queryset of recently visited profiles
+        self.get_visited_profiles(profile_pk, context)
+        # make queryset of followers requests:
+        context['followers_requests_queryset'] = self.get_followers_requests_queryset(logined_id)
         # queryset of partners:
-        context['partners'] = self.get_partners_queryset()
-
+        context['partners'] = self.get_partners_queryset(logined_id)
         # check if profile sent request to logined profile:
-        try:
-            logined_id = context['profile_id']
-            if Partner.objects.get(follower_id=profile_pk, followed_id=logined_id, response_date__isnull=True):
-                context['is_requested'] = True
-        except:
-            context['is_requested'] = False
-
+        context['is_requested'] = self.is_follow_request(logined_id, profile_pk)
         # check if user is follower:
-        if context.get('profile_id'):
-            is_follower = Partner.objects.filter(follower_id=profile_pk,
-                                                 followed_id=logined_id,
-                                                 response_date__isnull=False)
-            is_followed = Partner.objects.filter(followed_id=profile_pk,
-                                                 follower_id=logined_id,
-                                                 response_date__isnull=False)
-            if is_follower.exists() or is_followed.exists():
-                context['is_follower'] = True
-
+        context['is_follower'] = self.is_follower(logined_id, profile_pk)
         return context
 
 
